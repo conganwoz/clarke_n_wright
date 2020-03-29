@@ -54,6 +54,34 @@ double *F_CAP;
 double *B_CAP;
 double *F_ENERGY;
 double *B_ENERGY;
+int count1 = 0;
+
+
+struct route *find_route(int i)
+{
+  struct route *temp = ROUTE->next;
+  while (temp != NULL)
+  {
+    if (!(temp->is_merged))
+    {
+      int start = temp->start;
+      int end = temp->end;
+      int x = start;
+
+      while (x != end)
+      {
+        if (x == i)
+          return temp;
+        x = next_arr[x];
+      }
+      if (x == i)
+        return temp;
+    }
+    temp = temp->next;
+  }
+
+  return NULL;
+}
 
 void read_file(char *file_src)
 {
@@ -67,7 +95,7 @@ void read_file(char *file_src)
     printf("READ FILE ERROR\n");
   }
   else
-    printf("READ FILE SUCCESS\n");
+    printf("\nREAD FILE SUCCESS\n");
 
   fscanf(infile, "%d\n", &dimention);
   fscanf(infile, "%d\n", &num_customer);
@@ -287,7 +315,24 @@ void init()
         END_ROUTE->next = NULL;
         if (availble_energy[i] < distances[i][0])
           is_throught_station[i] = true;
-        continue;
+      }
+      else
+      {
+        availble_energy[i] = max_length - distances[station[i][0]][i];
+        next_arr[i] = -1;
+        pred_arr[i] = -1;
+        is_interior[i] = false;
+        visited[i] = true;
+        END_ROUTE->next = (struct route *)malloc(sizeof(struct route));
+        END_ROUTE = END_ROUTE->next;
+        END_ROUTE->start = i;
+        END_ROUTE->end = i;
+        END_ROUTE->capacity = demands[i];
+        END_ROUTE->is_merged = false;
+        END_ROUTE->next = NULL;
+        END_ROUTE->is_begin_with_station = true;
+        if (availble_energy[i] < distances[i][0])
+          is_throught_station[i] = true;
       }
     }
     else
@@ -336,10 +381,13 @@ struct route *update_bound(int i, int j, bool is_tail, double distance, bool is_
         temp->length = temp->length - distance;
         temp->capacity = temp->capacity - demands[k];
       }
-      temp->start = j;
-      temp->length = temp->length + distance;
-      temp->capacity = temp->capacity + demands[j];
-      temp->is_begin_with_station = is_init_throught_station;
+      else
+      {
+        temp->start = j;
+        temp->length = temp->length + distance;
+        temp->capacity = temp->capacity + demands[j];
+        temp->is_begin_with_station = is_init_throught_station;
+      }
       return temp;
     }
     else
@@ -353,7 +401,7 @@ struct route *update_bound(int i, int j, bool is_tail, double distance, bool is_
         temp->end = j;
         temp->length = temp->length + distance;
         temp->capacity = temp->capacity + demands[j];
-        temp->is_begin_with_station = is_init_throught_station;
+        //temp->is_begin_with_station = is_init_throught_station;
         return temp;
       }
     }
@@ -368,6 +416,8 @@ void add_new_node_to_route(int i, int j)
   {
     if (availble_energy[i] > distances[i][j])
     {
+      struct route *routej = find_route(j);
+      routej->is_merged = true;
       availble_energy[j] = availble_energy[i] - distances[i][j];
       next_arr[i] = j;
       pred_arr[j] = i;
@@ -379,6 +429,8 @@ void add_new_node_to_route(int i, int j)
     }
     else
     {
+      struct route *routej = find_route(j);
+      routej->is_merged = true;
       availble_energy[j] = max_length - distances[j][station[i][j]];
       next_arr[i] = j;
       pred_arr[j] = i;
@@ -396,6 +448,8 @@ void add_new_node_to_route(int i, int j)
       availble_energy[j] = max_length - distances[0][j];
       if (availble_energy[j] > distances[i][j])
       {
+        struct route *routej = find_route(j);
+        routej->is_merged = true;
         availble_energy[i] = availble_energy[j] - distances[i][j];
         pred_arr[j] = -1;
         next_arr[j] = i;
@@ -406,6 +460,8 @@ void add_new_node_to_route(int i, int j)
       }
       else
       {
+        struct route *routej = find_route(j);
+        routej->is_merged = true;
         availble_energy[i] = max_length - distances[station[i][j]][i];
         pred_arr[j] = -1;
         next_arr[j] = i;
@@ -421,6 +477,8 @@ void add_new_node_to_route(int i, int j)
       availble_energy[j] = max_length - distances[station[0][j]][j];
       if (availble_energy[j] > distances[i][j])
       {
+        struct route *routej = find_route(j);
+        routej->is_merged = true;
         availble_energy[i] = availble_energy[j] - distances[i][j];
         pred_arr[j] = -1;
         next_arr[j] = i;
@@ -431,6 +489,8 @@ void add_new_node_to_route(int i, int j)
       }
       else
       {
+        struct route *routej = find_route(j);
+        routej->is_merged = true;
         availble_energy[i] = max_length - distances[station[i][j]][i];
         pred_arr[j] = -1;
         next_arr[j] = i;
@@ -503,37 +563,13 @@ bool is_valid_merge_route(int i, int j)
     return false;
 }
 
-struct route *find_route(int i)
-{
-  struct route *temp = ROUTE->next;
-  while (temp != NULL)
-  {
-    if (!(temp->is_merged))
-    {
-      int start = temp->start;
-      int end = temp->end;
-      int x = start;
-
-      while (x != end)
-      {
-        if (x == i)
-          return temp;
-        x = next_arr[x];
-      }
-      if (x == i)
-        return temp;
-    }
-    temp = temp->next;
-  }
-
-  return NULL;
-}
-
 void revert_route(int i)
 {
   struct route *routei = find_route(i);
   int start = routei->start;
   int end = routei->end;
+
+  if(start == end) return;
 
   int x = end;
   while (x != start && x != -1)
@@ -583,7 +619,8 @@ int update_route(int i)
     }
     else
     {
-      availble_energy[x] = max_length - distances[station[pred_x][x]][x];
+      int best_station = station[x][pred_x];
+      availble_energy[x] = max_length - distances[best_station][x];
       is_throught_station[pred_x] = true;
     }
     x = next_arr[x];
@@ -610,6 +647,34 @@ int update_route(int i)
   routei->is_merged = true;
 
   return end;
+}
+
+void process_before_merge(int i, int j)
+{
+  struct route *routei = find_route(i);
+  struct route *routej = find_route(j);
+  int starti = routei -> start;
+  int endi = routei -> end;
+
+  int startj = routej -> start;
+  int endj = routej -> end;
+
+  if(starti == endi) is_interior[i] = false;
+  if(startj == endj) {
+    is_interior[j] = true;
+    return;
+  }
+
+  if(starti == endi && startj == endj){
+    is_interior[i] = false;
+    is_interior[j] = false;
+  } else if(starti != endi && startj != endj){
+    is_interior[i] = true;
+    is_interior[j] = true;
+  } else {
+    is_interior[i] = true;
+    is_interior[j] = false;
+  }
 }
 
 void merge_route(int i, int j)
@@ -650,13 +715,14 @@ void merge_route(int i, int j)
     {
       if (pred_arr[i] == -1 && pred_arr[j] == -1)
       {
-        struct route *routei = find_route(i);
-        struct route *routej = find_route(j);
-        if (routei->start == routei->end)
-          is_interior[i] = true;
-        if (routej->start == routej->end)
-          is_interior[j] = true;
+        // struct route *routei = find_route(i);
+        // struct route *routej = find_route(j);
+        // if (routei->start == routei->end)
+        //   is_interior[i] = true;
+        // if (routej->start == routej->end)
+        //   is_interior[j] = true;
 
+        process_before_merge(i, j);
         revert_route(j);
         if (availble_energy[j] > distances[i][j])
         {
@@ -675,6 +741,7 @@ void merge_route(int i, int j)
       }
       else if (next_arr[i] == -1 && next_arr[j] == -1)
       {
+        process_before_merge(i, j);
         revert_route(j);
         if (availble_energy[i] > distances[i][j])
         {
@@ -693,6 +760,7 @@ void merge_route(int i, int j)
       }
       else if (next_arr[i] == -1 && pred_arr[j] == -1)
       {
+        process_before_merge(i, j);
         if (availble_energy[i] > distances[i][j])
         {
           availble_energy[j] = availble_energy[i] - distances[i][j];
@@ -710,6 +778,7 @@ void merge_route(int i, int j)
       }
       else if (next_arr[j] == -1 && pred_arr[i] == -1)
       {
+        process_before_merge(i, j);
         if (availble_energy[j] > distances[i][j])
         {
           availble_energy[i] = availble_energy[j] - distances[i][j];
@@ -823,9 +892,13 @@ void create_capacity_seq(int start, int end)
     temp = temp->next;
   }
 }
+int num_route = 0;
 
 void show_result()
 {
+  FILE * fp;
+  fp = fopen ("./result.txt","a");
+  num_route = 0;
   if (ROUTE == NULL)
   {
     printf("no data");
@@ -833,6 +906,7 @@ void show_result()
   }
   printf("\n");
   struct route *temp = ROUTE->next;
+  fprintf(fp, "\n\nPROBLEM: dimension: %d - num_customer: %d - capacity: %lf - energy: %lf\n", dimention, num_customer, capacity, energy);
   while (temp != NULL)
   {
     if (!temp->is_merged)
@@ -841,50 +915,57 @@ void show_result()
       int end = temp->end;
       create_capacity_seq(start, end);
       int x = start;
-      printf("start: %d - end: %d\n", start, end);
+      num_route++;
+      fprintf(fp, "\n== Route: %d ==\n", num_route);
+      fprintf(fp, "start: %d - end: %d\n", start, end);
       while (x != end)
       {
-        printf("%d ", x);
+        fprintf(fp, "%-d -> ", x);
         x = next_arr[x];
       }
-      printf("%d \n", end);
+      fprintf(fp, "%-d \n", end);
 
       // show F_CAP
+      fprintf(fp, "F_CAP: ");
       x = start;
       while (x != end)
       {
-        printf("%.1lf ", F_CAP[x]);
+        fprintf(fp, "%-.1lf -> ", F_CAP[x]);
         x = next_arr[x];
       }
-      printf("%.1lf ", F_CAP[x]);
-      printf("\n");
+      fprintf(fp, "%-.1lf ", F_CAP[x]);
+      fprintf(fp, "\n");
+      fprintf(fp, "B_CAP: ");
       x = start;
       while (x != end)
       {
-        printf("%.1lf ", B_CAP[x]);
+        fprintf(fp, "%-.1lf -> ", B_CAP[x]);
         x = next_arr[x];
       }
-      printf("%.1lf ", B_CAP[x]);
-      printf("\n");
+      fprintf(fp, "%-.1lf ", B_CAP[x]);
+      fprintf(fp, "\n");
+      fprintf(fp, "F_ENERGY: ");
       x = start;
       while (x != end)
       {
-        printf("%.1lf ", F_ENERGY[x]);
+        fprintf(fp, "%-.1lf -> ", F_ENERGY[x]);
         x = next_arr[x];
       }
-      printf("%.1lf ", F_ENERGY[x]);
-      printf("\n");
+      fprintf(fp, "%-.1lf ", F_ENERGY[x]);
+      fprintf(fp, "\n");
+      fprintf(fp, "B_ENERGY: ");
       x = start;
       while (x != end)
       {
-        printf("%.1lf ", B_ENERGY[x]);
+        fprintf(fp, "%-.1lf -> ", B_ENERGY[x]);
         x = next_arr[x];
       }
-      printf("%.1lf ", B_ENERGY[x]);
-      printf("\n");
+      fprintf(fp, "%-.1lf ", B_ENERGY[x]);
+      fprintf(fp, "\n");
     }
     temp = temp->next;
   }
+  fclose (fp);
 }
 
 int main()
@@ -892,6 +973,7 @@ int main()
   read_file("./A-n32-k5.vrp");
   prepare_data();
   init();
+  printf("best_station: %d", station[10][15]);
   clarke_wright();
   show_result();
 
