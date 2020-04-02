@@ -968,75 +968,75 @@ void show_result()
   fclose (fp);
 }
 
-int main()
-{
-  read_file("./A-n32-k5.vrp");
-  prepare_data();
-  init();
-  printf("best_station: %d", station[10][15]);
-  clarke_wright();
-  show_result();
+// int main()
+// {
+//   read_file("./A-n32-k5.vrp");
+//   prepare_data();
+//   init();
+//   printf("best_station: %d", station[10][15]);
+//   clarke_wright();
+//   show_result();
 
-  printf("=============================");
-  read_file("./A-n33-k5.vrp");
-  prepare_data();
-  init();
-  clarke_wright();
-  show_result();
+//   printf("=============================");
+//   read_file("./A-n33-k5.vrp");
+//   prepare_data();
+//   init();
+//   clarke_wright();
+//   show_result();
 
-  printf("=============================");
-  read_file("./A-n33-k6.vrp");
-  prepare_data();
-  init();
-  clarke_wright();
-  show_result();
+//   printf("=============================");
+//   read_file("./A-n33-k6.vrp");
+//   prepare_data();
+//   init();
+//   clarke_wright();
+//   show_result();
 
-  printf("=============================");
-  read_file("./A-n34-k5.vrp");
-  prepare_data();
-  init();
-  clarke_wright();
-  show_result();
+//   printf("=============================");
+//   read_file("./A-n34-k5.vrp");
+//   prepare_data();
+//   init();
+//   clarke_wright();
+//   show_result();
 
-  printf("=============================");
-  read_file("./A-n36-k5.vrp");
-  prepare_data();
-  init();
-  clarke_wright();
-  show_result();
+//   printf("=============================");
+//   read_file("./A-n36-k5.vrp");
+//   prepare_data();
+//   init();
+//   clarke_wright();
+//   show_result();
 
-  printf("=============================");
-  read_file("./A-n37-k6.vrp");
-  prepare_data();
-  init();
-  clarke_wright();
-  show_result();
+//   printf("=============================");
+//   read_file("./A-n37-k6.vrp");
+//   prepare_data();
+//   init();
+//   clarke_wright();
+//   show_result();
 
-  printf("=============================");
-  read_file("./A-n38-k5.vrp");
-  prepare_data();
-  init();
-  clarke_wright();
-  show_result();
+//   printf("=============================");
+//   read_file("./A-n38-k5.vrp");
+//   prepare_data();
+//   init();
+//   clarke_wright();
+//   show_result();
 
-  printf("=============================");
-  read_file("./A-n39-k5.vrp");
-  prepare_data();
-  init();
-  clarke_wright();
-  show_result();
+//   printf("=============================");
+//   read_file("./A-n39-k5.vrp");
+//   prepare_data();
+//   init();
+//   clarke_wright();
+//   show_result();
 
-  printf("=============================");
-  read_file("./A-n39-k6.vrp");
-  prepare_data();
-  init();
-  clarke_wright();
-  show_result();
+//   printf("=============================");
+//   read_file("./A-n39-k6.vrp");
+//   prepare_data();
+//   init();
+//   clarke_wright();
+//   show_result();
 
-  printf("=============================");
-  read_file("./A-n45-k6.vrp");
-  prepare_data();
-  init();
-  clarke_wright();
-  show_result();
-}
+//   printf("=============================");
+//   read_file("./A-n45-k6.vrp");
+//   prepare_data();
+//   init();
+//   clarke_wright();
+//   show_result();
+// }

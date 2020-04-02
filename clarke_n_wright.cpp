@@ -935,14 +935,14 @@ void show_result()
   }
 }
 
-int main()
-{
-  read_file("./A-n36-k5.vrp");
-  prepare_data();
-  init();
+// int main()
+// {
+//   read_file("./A-n36-k5.vrp");
+//   prepare_data();
+//   init();
 
-  clarkewright();
+//   clarkewright();
 
-  show_result();
-  return -1;
-}
+//   show_result();
+//   return -1;
+// }
