@@ -30,9 +30,10 @@ double optimal_val = 0.0;
 
 double **distances;               // done
 double saving_distances[1000][3]; // done
-double *demands;                  // done
-double **coords;                  // done
-bool *visited;                    // done
+// double *demands;                  // done
+double demands[2000];
+double **coords; // done
+bool *visited;   // done
 
 // -- data in process --
 struct Route *routes = NULL;
@@ -58,7 +59,7 @@ void create_spaces_mem()
   best_stations = (int **)malloc(num_customers * sizeof(int *));
   best_stat_distances = (double **)malloc(num_customers * sizeof(int *));
 
-  demands = (double *)malloc(num_customers * sizeof(double));
+  // demands = (double *)malloc(num_customers * sizeof(double));
   next_arr = (int *)malloc(num_customers * sizeof(int));
   pred_arr = (int *)malloc(num_customers * sizeof(int));
   is_throught_station = (bool *)malloc(num_customers * sizeof(bool));
@@ -139,15 +140,6 @@ void read_file(char *file_src)
 
   fclose(infile);
   printf("\n");
-  for (i = 0; i < dimention; i++)
-  {
-    printf("%d: %lf - %lf\n", i, coords[i][0], coords[i][1]);
-  }
-  printf("\n");
-  for (i = 0; i < num_customers; i++)
-  {
-    printf("%d:  %lf\n", i, demands[i]);
-  }
 }
 
 void find_best_stations(int i, int j)
@@ -157,8 +149,6 @@ void find_best_stations(int i, int j)
   int best_stat = -1;
   for (k = num_customers; k < dimention; k++)
   {
-    double dist_i = distances[i][k];
-    double dist_j = distances[j][k];
     if (distances[i][k] + distances[j][k] < min_distance)
     {
       min_distance = distances[i][k] + distances[j][k];
@@ -247,15 +237,15 @@ double dist_consum(double distance)
 
 void init()
 {
-  int i;
+  int i = 0;
   for (i = 1; i < num_customers; i++)
   {
+    int x = demands[1];
     if (demands[i] <= max_capacity_vh)
     {
       int best_stat = best_stations[i][0];
       double best_stat_dis = best_stat_distances[i][0];
-      double dist_0i = distances[i][0];
-      double consum = dist_consum(dist_0i);
+
       if (dist_consum(distances[i][0] * 2) < max_energy_vh)
       {
         visited[i] = true;
@@ -275,7 +265,6 @@ void init()
         B_ENERGY[i] = available_energy[i];
       }
       else if (
-          // (dist_consum(distances[i][0]) > max_energy_vh) && (dist_consum(distances[best_stat][i]) < max_energy_vh) && (max_energy_vh - dist_consum(distances[best_stat][i]) > dist_consum(distances[0][i]))
           (dist_consum(distances[0][best_stat]) < max_energy_vh) && (max_energy_vh > dist_consum(distances[best_stat][i] + distances[i][0])))
       {
         visited[i] = true;
@@ -295,7 +284,6 @@ void init()
         B_ENERGY[i] = max_energy_vh - dist_consum(distances[i][0]);
       }
       else if (
-          // (dist_consum(distances[0][i]) > max_energy_vh) && (max_energy_vh - dist_consum(distances[0][i]) < dist_consum(distances[0][i])) && (max_energy_vh - dist_consum(distances[0][i]) > dist_consum(distances[i][best_stat])) && (max_energy_vh > dist_consum(distances[best_stat][0]))
           dist_consum(distances[0][i] + distances[i][best_stat]) < max_energy_vh && max_energy_vh >= dist_consum(distances[best_stat][0]))
       {
         visited[i] = true;
@@ -464,9 +452,9 @@ double revert_route(int i, bool is_forward)
       if (x == i)
       {
         pred_arr[x] = next_arr[x];
-        x = next_arr[x];
         if (next_arr[x] != 0)
           interior_length += distances[x][next_arr[x]];
+        x = next_arr[x];
       }
       else
       {
@@ -489,9 +477,9 @@ double revert_route(int i, bool is_forward)
       if (x == i)
       {
         next_arr[x] = pred_arr[x];
-        x = pred_arr[x];
         if (pred_arr[x] != 0)
           interior_length += distances[x][pred_arr[x]];
+        x = pred_arr[x];
       }
       else
       {
@@ -581,6 +569,22 @@ double get_interior_length(int i)
   return routes[route_i].length - begin_length - end_length;
 }
 
+void set_route_id(int i, int new_route_id)
+{
+  int start = routes[route_ids[i]].start;
+  int end = routes[route_ids[i]].end;
+  int x = start;
+
+  while (x != 0)
+  {
+    if (x != i)
+    {
+      route_ids[x] = new_route_id;
+    }
+    x = next_arr[x];
+  }
+}
+
 void temp_process(int i, int j)
 {
   int best_stat = best_stations[i][j];
@@ -589,13 +593,15 @@ void temp_process(int i, int j)
   {
     if (check_valid_merge_route_energy(j, available_energy[i] - dist_consum(distances[i][j]), true))
     {
+      set_route_id(j, route_ids[i]);
+      int route_i = route_ids[i];
+      int route_j = route_ids[j];
+      set_interior(i);
+      set_interior(j);
       next_arr[i] = j;
       pred_arr[j] = i;
 
       is_throught_station[i] = false;
-
-      set_interior(i);
-      set_interior(j);
 
       routes[route_ids[i]].end = routes[route_ids[j]].end;
       routes[route_ids[i]].length += (interior_length_j + distances[i][j]);
@@ -605,6 +611,7 @@ void temp_process(int i, int j)
     }
     else if ((available_energy[i] > dist_consum(distances[i][best_stat])) && (max_energy_vh > dist_consum(distances[best_stat][j])))
     {
+      set_route_id(j, route_ids[i]);
       pred_arr[j] = i;
       next_arr[i] = j;
       is_throught_station[i] = true;
@@ -658,13 +665,13 @@ void merge_route(int i, int j)
         {
           if (check_valid_merge_route_energy(j, available_energy[i] - dist_consum(distances[i][j]), false))
           {
+            set_route_id(j, route_ids[i]);
             double interior_length = revert_route(j, false);
+            set_interior(i);
+            set_interior(j);
             pred_arr[j] = i;
             next_arr[i] = j;
             is_throught_station[i] = false;
-
-            set_interior(i);
-            set_interior(j);
 
             // setup route info
             routes[route_ids[i]].end = routes[route_ids[j]].end;
@@ -676,13 +683,13 @@ void merge_route(int i, int j)
         }
         else if ((available_energy[i] > dist_consum(distances[i][best_stat])) && (max_energy_vh > dist_consum(distances[best_stat][j])))
         {
+          set_route_id(j, route_ids[i]);
           double interior_length = revert_route(j, false);
+          set_interior(i);
+          set_interior(j);
           pred_arr[j] = i;
           next_arr[i] = j;
           is_throught_station[i] = true;
-
-          set_interior(i);
-          set_interior(j);
 
           // setup route info
           routes[route_ids[i]].end = routes[route_ids[j]].end;
@@ -699,14 +706,14 @@ void merge_route(int i, int j)
         {
           if (check_valid_merge_route_energy(i, temp_avail_eng - dist_consum(distances[i][j]), true))
           {
+            set_route_id(i, route_ids[j]);
             double interior_length = revert_route(j, true);
+            set_interior(i);
+            set_interior(j);
             pred_arr[i] = j;
             next_arr[j] = i;
 
             is_throught_station[j] = false;
-
-            set_interior(i);
-            set_interior(j);
 
             // setup route info
             routes[route_ids[j]].end = routes[route_ids[i]].end;
@@ -720,14 +727,14 @@ void merge_route(int i, int j)
         {
           if (check_valid_merge_route_energy(i, max_energy_vh - dist_consum(distances[best_stat][j]), true))
           {
+            set_route_id(i, route_ids[j]);
             double interior_length = revert_route(j, true);
+            set_interior(i);
+            set_interior(j);
             pred_arr[i] = j;
             next_arr[j] = i;
 
             is_throught_station[j] = true;
-
-            set_interior(i);
-            set_interior(j);
 
             routes[route_ids[j]].end = routes[route_ids[i]].end;
             routes[route_ids[j]].length += (interior_length + best_stat_distances[i][j]);
@@ -739,41 +746,6 @@ void merge_route(int i, int j)
       }
       else if (next_arr[i] == 0 && pred_arr[j] == 0)
       {
-        // double interior_length_j = get_interior_length(j);
-        // if (available_energy[i] > dist_consum(distances[i][j]))
-        // {
-        //   if (check_valid_merge_route_energy(j, available_energy[i] - dist_consum(distances[i][j]), true))
-        //   {
-        //     next_arr[i] = j;
-        //     pred_arr[j] = i;
-
-        //     is_throught_station[i] = false;
-
-        //     set_interior(i);
-        //     set_interior(j);
-
-        //     routes[route_ids[i]].end = routes[route_ids[j]].end;
-        //     routes[route_ids[i]].length += (interior_length_j + distances[i][j]);
-        //     routes[route_ids[i]].load += routes[route_ids[j]].load;
-        //     routes[route_ids[j]].is_merged = true;
-        //     route_ids[j] = route_ids[i];
-        //   }
-        //   else if ((available_energy[i] > dist_consum(distances[i][best_stat])) && (max_energy_vh > dist_consum(distances[best_stat][j])))
-        //   {
-        //     pred_arr[j] = i;
-        //     next_arr[i] = j;
-        //     is_throught_station[i] = true;
-
-        //     set_interior(i);
-        //     set_interior(j);
-
-        //     routes[route_ids[i]].end = routes[route_ids[j]].end;
-        //     routes[route_ids[i]].length += (interior_length_j + best_stat_distances[i][j]);
-        //     routes[route_ids[i]].load += routes[route_ids[j]].load;
-        //     routes[route_ids[j]].is_merged = true;
-        //     route_ids[j] = route_ids[i];
-        //   }
-        // }
         temp_process(i, j);
       }
       else if (pred_arr[i] == 0 && next_arr[j] == 0)
@@ -783,22 +755,6 @@ void merge_route(int i, int j)
     }
   default:
     break;
-  }
-}
-
-void clarke_wright()
-{
-  int m;
-  for (m = 0; m < num_saving_distances; m++)
-  {
-    int i, j, saving;
-    i = (int)saving_distances[m][0];
-    j = (int)saving_distances[m][1];
-    saving = (int)saving_distances[m][2];
-    if (!check_is_same_route(i, j))
-    {
-      merge_route(i, j);
-    }
   }
 }
 
@@ -823,6 +779,25 @@ void show_result()
   }
 }
 
+void clarke_wright()
+{
+  int m;
+  for (m = 0; m < num_saving_distances; m++)
+  {
+    int i, j, saving;
+    i = (int)saving_distances[m][0];
+    j = (int)saving_distances[m][1];
+    saving = (int)saving_distances[m][2];
+    if (!check_is_same_route(i, j))
+    {
+      merge_route(i, j);
+      // printf("\n\n\n=================: %d\n", m);
+      // show_result();
+      // printf("\n=================\n\n\n");
+    }
+  }
+}
+
 int main()
 {
   read_file("E-n22-k4.evrp");
@@ -830,5 +805,119 @@ int main()
   init();
   clarke_wright();
   show_result();
+  printf("===================================\n\n");
+
+  read_file("./data_set/E-n23-k3.evrp");
+  prepare_data();
+  init();
+  clarke_wright();
+  show_result();
+  printf("===================================\n\n");
+
+  read_file("./data_set/E-n30-k3.evrp");
+  prepare_data();
+  init();
+  clarke_wright();
+  show_result();
+  printf("===================================\n\n");
+
+  read_file("./data_set/E-n33-k4.evrp");
+  prepare_data();
+  init();
+  clarke_wright();
+  show_result();
+  printf("===================================\n\n");
+
+  read_file("./data_set/E-n51-k5.evrp");
+  prepare_data();
+  init();
+  clarke_wright();
+  show_result();
+  printf("===================================\n\n");
+
+  // read_file("./data_set/E-n76-k7.evrp");
+  // prepare_data();
+  // init();
+  // clarke_wright();
+  // show_result();
+  // printf("===================================\n\n");
+
+  // read_file("./data_set/E-n101-k8.evrp");
+  // prepare_data();
+  // init();
+  // clarke_wright();
+  // show_result();
+  // printf("===================================\n\n");
+
+  // read_file("./data_set/E-n143-k7.evrp");
+  // prepare_data();
+  // init();
+  // clarke_wright();
+  // show_result();
+  // printf("===================================\n\n");
+
+  // read_file("./data_set/E-n214-k11.evrp");
+  // prepare_data();
+  // init();
+  // clarke_wright();
+  // show_result();
+  // printf("===================================\n\n");
+
+  // read_file("./data_set/E-n351-k40.evrp");
+  // prepare_data();
+  // init();
+  // clarke_wright();
+  // show_result();
+  // printf("===================================\n\n");
+
+  // read_file("./data_set/E-n459-k26.evrp");
+  // prepare_data();
+  // init();
+  // clarke_wright();
+  // show_result();
+  // printf("===================================\n\n");
+
+  // read_file("./data_set/E-n573-k30.evrp");
+  // prepare_data();
+  // init();
+  // clarke_wright();
+  // show_result();
+  // printf("===================================\n\n");
+
+  // read_file("./data_set/E-n685-k75.evrp");
+  // prepare_data();
+  // init();
+  // clarke_wright();
+  // show_result();
+  // printf("===================================\n\n");
+
+  // read_file("./data_set/E-n749-k98.evrp");
+  // prepare_data();
+  // init();
+  // clarke_wright();
+  // show_result();
+  // printf("===================================\n\n");
+
+  // read_file("./data_set/E-n819-k171.evrp");
+  // prepare_data();
+  // init();
+  // clarke_wright();
+  // show_result();
+  // printf("===================================\n\n");
+
+  // read_file("./data_set/E-n916-k207.evrp");
+  // prepare_data();
+  // init();
+  // clarke_wright();
+  // show_result();
+  // printf("===================================\n\n");
+
+  // read_file("./data_set/E-n1001-k43.evrp");
+  // prepare_data();
+  // init();
+  // clarke_wright();
+  // show_result();
+  // printf("===================================\n\n");
+
   return -1;
 }
